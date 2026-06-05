@@ -1,0 +1,13 @@
+{
+  "appId": "com.jonnathan.towerofbones",
+  "appName": "Tower of Bones",
+  "webDir": ".",
+  "android": {
+    "allowMixedContent": true
+  },
+  "plugins": {
+    "AdMob": {
+      "appId": "ca-app-pub-6853379352980306~6304076120"
+    }
+  }
+}
