@@ -27,6 +27,12 @@ jobs:
       - name: Instalar dependências
         run: npm install
 
+      - name: Criar pasta www e copiar arquivos
+        run: |
+          mkdir -p www
+          cp index.html www/
+          cp -r assets www/
+
       - name: Adicionar plataforma Android
         run: npx cap add android || true
 
