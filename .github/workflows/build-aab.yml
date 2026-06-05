@@ -29,9 +29,10 @@ jobs:
 
       - name: Criar pasta www e copiar arquivos
         run: |
-          mkdir -p www
+          mkdir -p www/assets
           cp index.html www/
-          cp -r assets www/
+          cp background.jpg bat.png boss.png captain.png door.png enemies.png image_411223cd.png jumper.png king.png shooter.png torch.png walker.png barrel1.png barrel2.png barrel3.png barrel_stack.png shield1.png shield2.png shield3.png shield4.png www/assets/
+          cp menu.mp3 www/assets/
 
       - name: Adicionar plataforma Android
         run: npx cap add android || true
