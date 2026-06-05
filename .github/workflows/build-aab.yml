@@ -1,53 +1,58 @@
 name: Build Android AAB
-
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
-
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
       - name: Configurar Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-
       - name: Instalar dependências
         run: npm install
-
       - name: Criar pasta www e copiar arquivos
         run: |
           mkdir -p www/assets
           cp index.html www/
           cp background.jpg bat.png boss.png captain.png door.png enemies.png image_411223cd.png jumper.png king.png shooter.png torch.png walker.png barrel1.png barrel2.png barrel3.png barrel_stack.png shield1.png shield2.png shield3.png shield4.png www/assets/
           cp menu.mp3 www/assets/
-
       - name: Adicionar plataforma Android
         run: npx cap add android || true
-
+      - name: Copiar ícones do app
+        run: |
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+          cp ic_launcher_mdpi.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          cp ic_launcher_mdpi.png android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          cp ic_launcher_hdpi.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          cp ic_launcher_hdpi.png android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          cp ic_launcher_xhdpi.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          cp ic_launcher_xhdpi.png android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          cp ic_launcher_xxhdpi.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          cp ic_launcher_xxhdpi.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+          cp ic_launcher_xxxhdpi.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cp ic_launcher_xxxhdpi.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
       - name: Sync Capacitor
         run: npx cap sync android
-
       - name: Tornar gradlew executável
         run: chmod +x android/gradlew
-
       - name: Build AAB (Release)
         run: |
           cd android
           ./gradlew bundleRelease
-
       - name: Assinar AAB
         uses: r0adkll/sign-android-release@v1
         id: sign_aab
@@ -57,7 +62,6 @@ jobs:
           alias: ${{ secrets.KEY_ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
-
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
