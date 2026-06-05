@@ -49,13 +49,9 @@ jobs:
         run: npx cap sync android
       - name: Atualizar SDKs para 35
         run: |
-          sed -i 's/targetSdk [0-9]*/targetSdk 35/g' android/app/build.gradle
-          sed -i 's/compileSdk [0-9]*/compileSdk 35/g' android/app/build.gradle
-          sed -i 's/targetSdkVersion [0-9]*/targetSdkVersion 35/g' android/app/build.gradle
-          sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 35/g' android/app/build.gradle
-          sed -i 's/minSdk [0-9]*/minSdk 22/g' android/app/build.gradle
-          sed -i 's/minSdkVersion [0-9]*/minSdkVersion 22/g' android/app/build.gradle
-          sed -i 's/buildToolsVersion "[^"]*"/buildToolsVersion "35.0.0"/g' android/app/build.gradle
+          sed -i 's/compileSdk rootProject.ext.compileSdkVersion/compileSdk 35/g' android/app/build.gradle
+          sed -i 's/targetSdkVersion rootProject.ext.targetSdkVersion/targetSdkVersion 35/g' android/app/build.gradle
+          sed -i 's/minSdkVersion rootProject.ext.minSdkVersion/minSdkVersion 22/g' android/app/build.gradle
           cat android/app/build.gradle
       - name: Tornar gradlew executável
         run: chmod +x android/gradlew
