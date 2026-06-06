@@ -28,6 +28,13 @@ jobs:
           cp menu.mp3 www/assets/
       - name: Adicionar plataforma Android
         run: npx cap add android || true
+      - name: Sync Capacitor
+        run: npx cap sync android
+      - name: Atualizar SDKs para 35
+        run: |
+          sed -i 's/compileSdk rootProject.ext.compileSdkVersion/compileSdk 35/g' android/app/build.gradle
+          sed -i 's/targetSdkVersion rootProject.ext.targetSdkVersion/targetSdkVersion 35/g' android/app/build.gradle
+          sed -i 's/minSdkVersion rootProject.ext.minSdkVersion/minSdkVersion 22/g' android/app/build.gradle
       - name: Copiar ícones do app
         run: |
           mkdir -p android/app/src/main/res/mipmap-mdpi
@@ -45,14 +52,6 @@ jobs:
           cp ic_launcher_xxhdpi.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
           cp ic_launcher_xxxhdpi.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           cp ic_launcher_xxxhdpi.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-      - name: Sync Capacitor
-        run: npx cap sync android
-      - name: Atualizar SDKs para 35
-        run: |
-          sed -i 's/compileSdk rootProject.ext.compileSdkVersion/compileSdk 35/g' android/app/build.gradle
-          sed -i 's/targetSdkVersion rootProject.ext.targetSdkVersion/targetSdkVersion 35/g' android/app/build.gradle
-          sed -i 's/minSdkVersion rootProject.ext.minSdkVersion/minSdkVersion 22/g' android/app/build.gradle
-          cat android/app/build.gradle
       - name: Tornar gradlew executável
         run: chmod +x android/gradlew
       - name: Build AAB (Release)
