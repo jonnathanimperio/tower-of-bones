@@ -35,6 +35,7 @@ jobs:
           sed -i 's/compileSdk rootProject.ext.compileSdkVersion/compileSdk 35/g' android/app/build.gradle
           sed -i 's/targetSdkVersion rootProject.ext.targetSdkVersion/targetSdkVersion 35/g' android/app/build.gradle
           sed -i 's/minSdkVersion rootProject.ext.minSdkVersion/minSdkVersion 22/g' android/app/build.gradle
+          sed -i "s/versionCode [0-9]*/versionCode ${{ github.run_number }}/g" android/app/build.gradle
       - name: Copiar ícones do app
         run: |
           mkdir -p android/app/src/main/res/mipmap-mdpi
