@@ -686,7 +686,7 @@ const AdMobBridge = {
 
   async init() {
     try {
-      const { AdMob } = await import('./node_modules/@capacitor-community/admob/dist/esm/index.js').catch(()=>({}));
+      const AdMob = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob;
       if (!AdMob) return;
       await AdMob.initialize({ testingDevices: [], initializeForTesting: false });
       this._ready = true;
