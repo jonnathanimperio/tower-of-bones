@@ -30,6 +30,18 @@ jobs:
         run: npx cap add android || true
       - name: Sync Capacitor
         run: npx cap sync android
+      - name: Adicionar App ID AdMob no Manifesto
+        run: |
+          python3 << 'PYEOF'
+          with open('android/app/src/main/AndroidManifest.xml', 'r') as f:
+              content = f.read()
+          admob_tag = '    <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-6853379352980306~6304076120"/>'
+          if 'APPLICATION_ID' not in content:
+              content = content.replace('</application>', admob_tag + '\n    </application>')
+          with open('android/app/src/main/AndroidManifest.xml', 'w') as f:
+              f.write(content)
+          print("App ID AdMob adicionado com sucesso!")
+          PYEOF
       - name: Atualizar SDKs para 35
         run: |
           sed -i 's/compileSdk rootProject.ext.compileSdkVersion/compileSdk 35/g' android/app/build.gradle
@@ -53,6 +65,8 @@ jobs:
           cp ic_launcher_xxhdpi.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
           cp ic_launcher_xxxhdpi.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           cp ic_launcher_xxxhdpi.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+      - name: Forçar ícones PNG
+        run: rm -rf android/app/src/main/res/mipmap-anydpi-v26
       - name: Tornar gradlew executável
         run: chmod +x android/gradlew
       - name: Build AAB (Release)
