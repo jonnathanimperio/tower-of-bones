@@ -684,6 +684,17 @@ const AdMobBridge = {
   _ready: false,
   _deathCount: 0,
 
+  _resumeMusic() {
+    try {
+      const el = document.getElementById('menu-music');
+      if (el && el.paused) {
+        el.volume = (typeof Volume !== 'undefined') ? Volume.musicLevel : 0.55;
+        const p = el.play();
+        if (p && p.catch) p.catch(()=>{});
+      }
+    } catch(e) {}
+  },
+
   async init() {
     try {
       const AdMob = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob;
@@ -712,14 +723,16 @@ const AdMobBridge = {
   // Chamado ao completar fase — mostra intercalar premiado e dá +10 moedas
   async onStageComplete() {
     try {
-      const { AdMob } = Capacitor.Plugins;
+      const AdMob = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob;
+      if (!AdMob) return;
       const result = await AdMob.showRewardedInterstitialAd();
-      if (result && result.reward) {
+      if (result) {
         Game.totalCoins += 10;
         Game.updateHUD();
       }
+      this._resumeMusic();
       this._preloadInterstitialRewarded();
-    } catch(e) {}
+    } catch(e) { this._resumeMusic(); }
   },
 
   // Chamado ao morrer — a cada 2 mortes mostra intercalar premiado
@@ -728,28 +741,32 @@ const AdMobBridge = {
     if (this._deathCount >= 2) {
       this._deathCount = 0;
       try {
-        const { AdMob } = Capacitor.Plugins;
+        const AdMob = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob;
+        if (!AdMob) return;
         const result = await AdMob.showRewardedInterstitialAd();
-        if (result && result.reward) {
+        if (result) {
           Game.totalCoins += 10;
         }
+        this._resumeMusic();
         this._preloadInterstitialRewarded();
-      } catch(e) {}
+      } catch(e) { this._resumeMusic(); }
     }
   },
 
   // Chamado pelo botão da loja — mostra rewarded e dá +10 moedas
   async onShopAd(callback) {
     try {
-      const { AdMob } = Capacitor.Plugins;
+      const AdMob = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob;
+      if (!AdMob) return;
       const result = await AdMob.showRewardVideoAd();
-      if (result && result.reward) {
+      if (result) {
         Game.totalCoins += 10;
         Game.updateHUD();
         if (callback) callback();
       }
+      this._resumeMusic();
       this._preloadRewarded();
-    } catch(e) {}
+    } catch(e) { this._resumeMusic(); }
   }
 };
 
