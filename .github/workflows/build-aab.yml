@@ -1,50 +1,50 @@
 name: Build Android AAB
-
+ 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
-
+ 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+ 
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
-
+ 
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-
-      - name: Configurar Java 17
+          node-version: '22'
+ 
+      - name: Configurar Java 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
-
+          java-version: '21'
+ 
       - name: Instalar dependências
         run: npm install
-
+ 
       - name: Adicionar plataforma Android
         run: npx cap add android || true
-
+ 
       - name: Sync Capacitor
         run: npx cap sync android
-
+ 
       - name: Atualizar versionCode (sempre crescente, exigido pela Play Store)
         run: |
           sed -i "s/versionCode [0-9]*/versionCode $(date +%s)/g" android/app/build.gradle
-
+ 
       - name: Tornar gradlew executável
         run: chmod +x android/gradlew
-
+ 
       - name: Build AAB (Release)
         run: |
           cd android
           ./gradlew bundleRelease
-
+ 
       - name: Assinar AAB
         uses: r0adkll/sign-android-release@v1
         id: sign_aab
@@ -54,7 +54,7 @@ jobs:
           alias: ${{ secrets.KEY_ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
-
+ 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
