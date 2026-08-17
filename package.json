@@ -9,13 +9,15 @@
     "capacitor:sync:after": "node node_modules/capacitor-levelplay-ads/scripts/levelplay-manifest.js"
   },
   "levelplay": {
-    "networks": ["unityads"],
+    "networks": [
+      "unityads"
+    ],
     "consentProvider": "custom"
   },
   "dependencies": {
     "@capacitor/core": "^6.0.0",
     "@capacitor/android": "^6.0.0",
-    "capacitor-levelplay-ads": "^1.0.0"
+    "capacitor-levelplay-ads": "*"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.0.0"
