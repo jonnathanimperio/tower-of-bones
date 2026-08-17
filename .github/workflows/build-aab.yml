@@ -1,78 +1,50 @@
 name: Build Android AAB
+
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
+
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-      - name: Configurar Java 21
+          node-version: '20'
+
+      - name: Configurar Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '17'
+
       - name: Instalar dependências
         run: npm install
-      - name: Criar pasta www e copiar arquivos
-        run: |
-          mkdir -p www/assets
-          cp index.html www/
-          cp background.jpg bat.png boss.png captain.png door.png enemies.png image_411223cd.png jumper.png king.png shooter.png torch.png walker.png barrel1.png barrel2.png barrel3.png barrel_stack.png shield1.png shield2.png shield3.png shield4.png www/assets/
-          cp menu.mp3 www/assets/
+
       - name: Adicionar plataforma Android
         run: npx cap add android || true
+
       - name: Sync Capacitor
         run: npx cap sync android
-      - name: Adicionar App ID AdMob no Manifesto
+
+      - name: Atualizar versionCode (sempre crescente, exigido pela Play Store)
         run: |
-          python3 << 'PYEOF'
-          with open('android/app/src/main/AndroidManifest.xml', 'r') as f:
-              content = f.read()
-          admob_tag = '    <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-6853379352980306~6304076120"/>'
-          if 'APPLICATION_ID' not in content:
-              content = content.replace('</application>', admob_tag + '\n    </application>')
-          with open('android/app/src/main/AndroidManifest.xml', 'w') as f:
-              f.write(content)
-          print("App ID AdMob adicionado com sucesso!")
-          PYEOF
-      - name: Atualizar SDKs para 36
-        run: |
-          sed -i 's/compileSdk rootProject.ext.compileSdkVersion/compileSdk 36/g' android/app/build.gradle
-          sed -i 's/targetSdkVersion rootProject.ext.targetSdkVersion/targetSdkVersion 36/g' android/app/build.gradle
-          sed -i 's/minSdkVersion rootProject.ext.minSdkVersion/minSdkVersion 24/g' android/app/build.gradle
           sed -i "s/versionCode [0-9]*/versionCode $(date +%s)/g" android/app/build.gradle
-      - name: Copiar ícones do app
-        run: |
-          mkdir -p android/app/src/main/res/mipmap-mdpi
-          mkdir -p android/app/src/main/res/mipmap-hdpi
-          mkdir -p android/app/src/main/res/mipmap-xhdpi
-          mkdir -p android/app/src/main/res/mipmap-xxhdpi
-          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
-          cp ic_launcher_mdpi.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          cp ic_launcher_mdpi.png android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
-          cp ic_launcher_hdpi.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          cp ic_launcher_hdpi.png android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
-          cp ic_launcher_xhdpi.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          cp ic_launcher_xhdpi.png android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
-          cp ic_launcher_xxhdpi.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          cp ic_launcher_xxhdpi.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
-          cp ic_launcher_xxxhdpi.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          cp ic_launcher_xxxhdpi.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-      - name: Forçar ícones PNG
-        run: rm -rf android/app/src/main/res/mipmap-anydpi-v26
+
       - name: Tornar gradlew executável
         run: chmod +x android/gradlew
+
       - name: Build AAB (Release)
         run: |
           cd android
           ./gradlew bundleRelease
+
       - name: Assinar AAB
         uses: r0adkll/sign-android-release@v1
         id: sign_aab
@@ -82,6 +54,7 @@ jobs:
           alias: ${{ secrets.KEY_ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
+
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
