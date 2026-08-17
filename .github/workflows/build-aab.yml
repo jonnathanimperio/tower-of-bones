@@ -1,5 +1,4 @@
 name: Build Android AAB
-
  
 on:
   push:
@@ -30,9 +29,18 @@ jobs:
  
       - name: Criar pasta www e copiar arquivos
         run: |
-          mkdir -p www
+          mkdir -p www/assets
           cp index.html www/
-          cp -r assets www/assets
+          if [ -d assets ]; then
+            cp -r assets/* www/assets/
+          fi
+          cp *.png www/assets/ 2>/dev/null || true
+          cp *.jpg www/assets/ 2>/dev/null || true
+          cp *.jpeg www/assets/ 2>/dev/null || true
+          cp *.mp3 www/assets/ 2>/dev/null || true
+          cp *.wav www/assets/ 2>/dev/null || true
+          echo "Arquivos copiados pra www/assets:"
+          ls -la www/assets/
  
       - name: Adicionar plataforma Android
         run: npx cap add android || true
