@@ -683,101 +683,44 @@ const AD_REWARDED              = 'ca-app-pub-6853379352980306/3376474547';
 const AdMobBridge = {
   _ready: false,
   _deathCount: 0,
-  debugLog: [],
-
-  _log(msg) {
-    this.debugLog.push(msg);
-    if (this.debugLog.length > 30) this.debugLog.shift();
-    // Se for um erro/aviso de verdade, mostra na tela automaticamente,
-    // sem precisar apertar nenhum botão de debug
-    if (msg.indexOf('ERRO') === 0 || msg.indexOf('AVISO') === 0) {
-      this._showToast('⚠️ Erro no pedido de anúncio: ' + msg);
-    }
-  },
-
-  _showToast(text) {
-    try {
-      let el = document.getElementById('ad-error-toast');
-      if (!el) {
-        el = document.createElement('div');
-        el.id = 'ad-error-toast';
-        el.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:99999;'
-          + 'background:rgba(120,20,20,0.95);color:#fff;font-size:11px;line-height:1.4;'
-          + 'padding:8px 10px;border-radius:8px;border:1px solid #ff6050;'
-          + 'font-family:sans-serif;max-height:35vh;overflow-y:auto;white-space:pre-wrap;';
-        el.textContent = '';
-        document.body.appendChild(el);
-      }
-      el.textContent += (el.textContent ? '\n' : '') + text;
-      el.style.display = 'block';
-      clearTimeout(this._toastTimer);
-      this._toastTimer = setTimeout(() => { el.style.display = 'none'; el.textContent = ''; }, 20000);
-    } catch(e) {}
-  },
-
-  // Roda uma Promise com um limite de tempo — se travar, desiste em vez de
-  // ficar parado pra sempre
-  _withTimeout(promise, ms, label) {
-    return Promise.race([
-      promise,
-      new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT (' + ms + 'ms) em ' + label)), ms))
-    ]);
-  },
 
   async init() {
     try {
-      this._log('init: iniciando...');
-      if (!window.Capacitor) { this._log('ERRO: window.Capacitor não existe (não é app nativo)'); return; }
-      if (!Capacitor.Plugins.AdMob) { this._log('ERRO: plugin AdMob não registrado no Capacitor.Plugins'); return; }
-      this._log('plugin encontrado, ok');
+      if (!window.Capacitor || !Capacitor.Plugins.AdMob) return;
       const { AdMob } = Capacitor.Plugins;
-      await this._withTimeout(
-        AdMob.initialize({ testingDevices: [], initializeForTesting: false }),
-        8000, 'initialize'
-      );
-      this._log('initialize: ok');
+      await AdMob.initialize({ testingDevices: [], initializeForTesting: false });
       this._ready = true;
       this._preloadInterstitialRewarded();
       this._preloadRewarded();
-    } catch(e) {
-      this._log('ERRO CAPTURADO no init: ' + (e && e.message ? e.message : JSON.stringify(e)));
-    }
+    } catch(e) {}
   },
 
   async _preloadInterstitialRewarded() {
     try {
       const { AdMob } = Capacitor.Plugins;
-      await AdMob.prepareRewardedInterstitialAd({ adId: AD_INTERSTITIAL_REWARDED });
-      this._log('prepareRewardedInterstitialAd: ok');
-    } catch(e) {
-      this._log('AVISO prepareRewardedInterstitialAd falhou: ' + (e && e.message ? e.message : JSON.stringify(e)));
-    }
+      await AdMob.prepareRewardInterstitialAd({ adId: AD_INTERSTITIAL_REWARDED });
+    } catch(e) {}
   },
 
   async _preloadRewarded() {
     try {
       const { AdMob } = Capacitor.Plugins;
       await AdMob.prepareRewardVideoAd({ adId: AD_REWARDED });
-      this._log('prepareRewardVideoAd: ok');
-    } catch(e) {
-      this._log('AVISO prepareRewardVideoAd falhou: ' + (e && e.message ? e.message : JSON.stringify(e)));
-    }
+    } catch(e) {}
   },
 
   // Chamado ao completar fase — mostra intercalar premiado e dá +10 moedas
   async onStageComplete() {
-    if (!this._ready) { this._log('onStageComplete: abortado, _ready=false'); return; }
+    if (!this._ready) return;
     try {
       const { AdMob } = Capacitor.Plugins;
-      const result = await this._withTimeout(AdMob.showRewardedInterstitialAd(), 15000, 'showRewardedInterstitialAd');
-      if (result && result.reward) {
+      const result = await AdMob.showRewardInterstitialAd();
+      if (result && (result.amount > 0 || result.type)) {
         Game.totalCoins += 10;
         Game.updateHUD();
       }
       this._preloadInterstitialRewarded();
-    } catch(e) {
-      this._log('ERRO showRewardedInterstitialAd: ' + (e && e.message ? e.message : JSON.stringify(e)));
-    }
+    } catch(e) {}
   },
 
   // Chamado ao morrer — a cada 2 mortes mostra intercalar premiado
@@ -785,54 +728,37 @@ const AdMobBridge = {
     this._deathCount++;
     if (this._deathCount >= 2) {
       this._deathCount = 0;
-      if (!this._ready) { this._log('onDeath: abortado, _ready=false'); return; }
+      if (!this._ready) return;
       try {
         const { AdMob } = Capacitor.Plugins;
-        const result = await this._withTimeout(AdMob.showRewardedInterstitialAd(), 15000, 'showRewardedInterstitialAd(death)');
-        if (result && result.reward) {
+        const result = await AdMob.showRewardInterstitialAd();
+        if (result && (result.amount > 0 || result.type)) {
           Game.totalCoins += 10;
         }
         this._preloadInterstitialRewarded();
-      } catch(e) {
-        this._log('ERRO showRewardedInterstitialAd(death): ' + (e && e.message ? e.message : JSON.stringify(e)));
-      }
+      } catch(e) {}
     }
   },
 
   // Chamado pelo botão da loja — mostra rewarded e dá +10 moedas
   async onShopAd(callback) {
-    if (!this._ready) { this._log('onShopAd: abortado, _ready=false'); return; }
+    if (!this._ready) return;
     try {
       const { AdMob } = Capacitor.Plugins;
-      const result = await this._withTimeout(AdMob.showRewardVideoAd(), 15000, 'showRewardVideoAd');
-      if (result && result.reward) {
+      const result = await AdMob.showRewardVideoAd();
+      if (result && (result.amount > 0 || result.type)) {
         Game.totalCoins += 10;
         Game.updateHUD();
         if (callback) callback();
       }
       this._preloadRewarded();
-    } catch(e) {
-      this._log('ERRO showRewardVideoAd: ' + (e && e.message ? e.message : JSON.stringify(e)));
-    }
+    } catch(e) {}
   }
 };
 
-// Inicializa quando Capacitor estiver pronto — tenta por até ~5s,
-// caso o bridge nativo demore um pouco a mais pra injetar window.Capacitor
+// Inicializa quando Capacitor estiver pronto
 document.addEventListener('DOMContentLoaded', () => {
-  let tries = 0;
-  const tryInit = () => {
-    tries++;
-    if (window.Capacitor) {
-      AdMobBridge._log('Capacitor ficou pronto após ' + tries + ' tentativa(s)');
-      AdMobBridge.init();
-    } else if (tries < 25) {
-      setTimeout(tryInit, 200);
-    } else {
-      AdMobBridge._log('ERRO: window.Capacitor nunca apareceu depois de 5s (' + tries + ' tentativas)');
-    }
-  };
-  tryInit();
+  if (window.Capacitor) AdMobBridge.init();
 });
 </script>
 <body>
@@ -946,7 +872,6 @@ document.addEventListener('DOMContentLoaded', () => {
     <p>Suba os 10 andares da torre amaldiçoada. Enfrente armadilhas, derrote inimigos e colete moedas até alcançar o topo.</p>
     <button class="menu-btn" id="btn-start">INICIAR JORNADA</button>
     <button class="menu-btn" id="btn-gamepad" style="background: linear-gradient(to bottom, #1a2a44, #0d1728); border-color: #4080c0; color: #a8cbf0; margin-top: 10px; font-size: 13px;">🎮 CONTROLE BLUETOOTH</button>
-    <button class="menu-btn" id="btn-ad-debug" style="background: linear-gradient(to bottom, #2a1a1a, #180d0d); border-color: #c06040; color: #f0a880; margin-top: 6px; font-size: 11px; padding: 6px;">🐛 DEBUG DE ANÚNCIOS (temporário)</button>
     <p class="desktop-hint">Setas/WASD para mover · Espaço para pular · X para atacar</p>
   </div>
 
@@ -7277,16 +7202,6 @@ document.getElementById('btn-help-close').addEventListener('click', () => {
     screenGp.classList.add('hidden');
     screenStart.classList.remove('hidden');
     if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
-  });
-  document.getElementById('btn-ad-debug').addEventListener('click', () => {
-    const info = [
-      'Capacitor existe: ' + !!window.Capacitor,
-      'Plugin AdMob existe: ' + !!(window.Capacitor && Capacitor.Plugins.AdMob),
-      'AdMobBridge._ready: ' + AdMobBridge._ready,
-      '--- LOG ---',
-      ...AdMobBridge.debugLog
-    ].join('\n');
-    alert(info);
   });
   chk.addEventListener('change', () => {
     Input.gamepadEnabled = chk.checked;
