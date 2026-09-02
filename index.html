@@ -674,14 +674,12 @@
 
 </style>
 </head>
-<!-- Capacitor + Unity LevelPlay Ads -->
+<!-- Capacitor + AdMob -->
 <script>
-// Wrapper LevelPlay — funciona só dentro do APK/AAB, silencioso no browser
-const LEVELPLAY_APP_KEY = '800356862'; // Game ID do painel Unity LevelPlay
-const AD_REWARDED     = 'Rewarded_Android';
-const AD_INTERSTITIAL = 'Interstitial_Android'; // disponível, não usado ainda
-const AD_BANNER       = 'Banner_Android';
+const AD_INTERSTITIAL_REWARDED = 'ca-app-pub-6853379352980306/9634761132';
+const AD_REWARDED              = 'ca-app-pub-6853379352980306/3376474547';
 
+// Wrapper AdMob — funciona só dentro do APK/AAB, silencioso no browser
 const AdMobBridge = {
   _ready: false,
   _deathCount: 0,
@@ -710,7 +708,6 @@ const AdMobBridge = {
         el.textContent = '';
         document.body.appendChild(el);
       }
-      // acrescenta ao invés de substituir, pra não perder erros anteriores
       el.textContent += (el.textContent ? '\n' : '') + text;
       el.style.display = 'block';
       clearTimeout(this._toastTimer);
@@ -719,8 +716,7 @@ const AdMobBridge = {
   },
 
   // Roda uma Promise com um limite de tempo — se travar, desiste em vez de
-  // ficar parado pra sempre (evita que o app fique preso esperando algo
-  // que nunca responde, tipo o alerta de consentimento)
+  // ficar parado pra sempre
   _withTimeout(promise, ms, label) {
     return Promise.race([
       promise,
@@ -732,96 +728,92 @@ const AdMobBridge = {
     try {
       this._log('init: iniciando...');
       if (!window.Capacitor) { this._log('ERRO: window.Capacitor não existe (não é app nativo)'); return; }
-      if (!Capacitor.Plugins.LevelPlayAds) { this._log('ERRO: plugin LevelPlayAds não registrado no Capacitor.Plugins'); return; }
+      if (!Capacitor.Plugins.AdMob) { this._log('ERRO: plugin AdMob não registrado no Capacitor.Plugins'); return; }
       this._log('plugin encontrado, ok');
-      const { LevelPlayAds } = Capacitor.Plugins;
-      // COPPA: jogo direcionado a criança de 10 anos
-      try {
-        await this._withTimeout(LevelPlayAds.setChildDirected({ isChildDirected: true }), 5000, 'setChildDirected');
-        this._log('setChildDirected: ok');
-      } catch(e) {
-        this._log('AVISO setChildDirected falhou/travou, seguindo sem ela: ' + e.message);
-      }
-      try {
-        await this._withTimeout(LevelPlayAds.requestConsentInfo({}), 5000, 'requestConsentInfo');
-        this._log('requestConsentInfo: ok');
-      } catch(e) {
-        this._log('AVISO requestConsentInfo falhou/travou, seguindo sem ela: ' + e.message);
-      }
+      const { AdMob } = Capacitor.Plugins;
       await this._withTimeout(
-        LevelPlayAds.initialize({ appKey: LEVELPLAY_APP_KEY, isTesting: false }),
+        AdMob.initialize({ testingDevices: [], initializeForTesting: false }),
         8000, 'initialize'
       );
-      this._log('initialize: ok, appKey=' + LEVELPLAY_APP_KEY);
+      this._log('initialize: ok');
       this._ready = true;
+      this._preloadInterstitialRewarded();
       this._preloadRewarded();
-      // banner fixo no topo — empurra a área de jogo pra baixo, não sobrepõe os controles
-      try {
-        await this._withTimeout(LevelPlayAds.createBanner({
-          adUnitId: AD_BANNER,
-          adSize: 'ADAPTIVE',
-          position: 'TOP',
-          isOverlap: false,
-        }), 5000, 'createBanner');
-        this._log('createBanner: ok');
-      } catch(e) {
-        this._log('AVISO createBanner falhou: ' + e.message);
-      }
     } catch(e) {
-      this._log('ERRO CAPTURADO: ' + (e && e.message ? e.message : JSON.stringify(e)));
+      this._log('ERRO CAPTURADO no init: ' + (e && e.message ? e.message : JSON.stringify(e)));
+    }
+  },
+
+  async _preloadInterstitialRewarded() {
+    try {
+      const { AdMob } = Capacitor.Plugins;
+      await AdMob.prepareRewardedInterstitialAd({ adId: AD_INTERSTITIAL_REWARDED });
+      this._log('prepareRewardedInterstitialAd: ok');
+    } catch(e) {
+      this._log('AVISO prepareRewardedInterstitialAd falhou: ' + (e && e.message ? e.message : JSON.stringify(e)));
     }
   },
 
   async _preloadRewarded() {
     try {
-      const { LevelPlayAds } = Capacitor.Plugins;
-      await LevelPlayAds.loadRewarded({ adUnitId: AD_REWARDED });
-      this._log('loadRewarded: pedido enviado');
+      const { AdMob } = Capacitor.Plugins;
+      await AdMob.prepareRewardVideoAd({ adId: AD_REWARDED });
+      this._log('prepareRewardVideoAd: ok');
     } catch(e) {
-      this._log('ERRO loadRewarded: ' + (e && e.message ? e.message : JSON.stringify(e)));
+      this._log('AVISO prepareRewardVideoAd falhou: ' + (e && e.message ? e.message : JSON.stringify(e)));
     }
   },
 
-  // Mostra o rewarded e dá moedas se o jogador assistir até o fim
-  async _showRewardedAndGrant(amount, callback) {
-    if (!this._ready) { this._log('showRewarded: abortado, _ready=false'); return; }
+  // Chamado ao completar fase — mostra intercalar premiado e dá +10 moedas
+  async onStageComplete() {
+    if (!this._ready) { this._log('onStageComplete: abortado, _ready=false'); return; }
     try {
-      const { LevelPlayAds } = Capacitor.Plugins;
-      const { isReady } = await LevelPlayAds.isRewardedReady();
-      this._log('isRewardedReady: ' + isReady);
-      if (!isReady) { this._preloadRewarded(); return; }
-      let rewarded = false;
-      const handle = await LevelPlayAds.addListener('onRewardedAdRewarded', () => { rewarded = true; });
-      await LevelPlayAds.showRewarded();
-      handle.remove();
-      if (rewarded) {
-        Game.totalCoins += amount;
+      const { AdMob } = Capacitor.Plugins;
+      const result = await this._withTimeout(AdMob.showRewardedInterstitialAd(), 15000, 'showRewardedInterstitialAd');
+      if (result && result.reward) {
+        Game.totalCoins += 10;
+        Game.updateHUD();
+      }
+      this._preloadInterstitialRewarded();
+    } catch(e) {
+      this._log('ERRO showRewardedInterstitialAd: ' + (e && e.message ? e.message : JSON.stringify(e)));
+    }
+  },
+
+  // Chamado ao morrer — a cada 2 mortes mostra intercalar premiado
+  async onDeath() {
+    this._deathCount++;
+    if (this._deathCount >= 2) {
+      this._deathCount = 0;
+      if (!this._ready) { this._log('onDeath: abortado, _ready=false'); return; }
+      try {
+        const { AdMob } = Capacitor.Plugins;
+        const result = await this._withTimeout(AdMob.showRewardedInterstitialAd(), 15000, 'showRewardedInterstitialAd(death)');
+        if (result && result.reward) {
+          Game.totalCoins += 10;
+        }
+        this._preloadInterstitialRewarded();
+      } catch(e) {
+        this._log('ERRO showRewardedInterstitialAd(death): ' + (e && e.message ? e.message : JSON.stringify(e)));
+      }
+    }
+  },
+
+  // Chamado pelo botão da loja — mostra rewarded e dá +10 moedas
+  async onShopAd(callback) {
+    if (!this._ready) { this._log('onShopAd: abortado, _ready=false'); return; }
+    try {
+      const { AdMob } = Capacitor.Plugins;
+      const result = await this._withTimeout(AdMob.showRewardVideoAd(), 15000, 'showRewardVideoAd');
+      if (result && result.reward) {
+        Game.totalCoins += 10;
         Game.updateHUD();
         if (callback) callback();
       }
       this._preloadRewarded();
     } catch(e) {
-      this._log('ERRO showRewarded: ' + (e && e.message ? e.message : JSON.stringify(e)));
+      this._log('ERRO showRewardVideoAd: ' + (e && e.message ? e.message : JSON.stringify(e)));
     }
-  },
-
-  // Chamado ao completar fase — mostra premiado e dá +10 moedas
-  async onStageComplete() {
-    await this._showRewardedAndGrant(10);
-  },
-
-  // Chamado ao morrer — a cada 2 mortes mostra premiado
-  async onDeath() {
-    this._deathCount++;
-    if (this._deathCount >= 2) {
-      this._deathCount = 0;
-      await this._showRewardedAndGrant(10);
-    }
-  },
-
-  // Chamado pelo botão da loja — mostra premiado e dá +10 moedas
-  async onShopAd(callback) {
-    await this._showRewardedAndGrant(10, callback);
   }
 };
 
@@ -7289,7 +7281,7 @@ document.getElementById('btn-help-close').addEventListener('click', () => {
   document.getElementById('btn-ad-debug').addEventListener('click', () => {
     const info = [
       'Capacitor existe: ' + !!window.Capacitor,
-      'Plugin LevelPlayAds existe: ' + !!(window.Capacitor && Capacitor.Plugins.LevelPlayAds),
+      'Plugin AdMob existe: ' + !!(window.Capacitor && Capacitor.Plugins.AdMob),
       'AdMobBridge._ready: ' + AdMobBridge._ready,
       '--- LOG ---',
       ...AdMobBridge.debugLog

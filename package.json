@@ -5,19 +5,12 @@
   "main": "index.js",
   "scripts": {
     "build": "echo 'No build step needed'",
-    "cap:sync": "npx cap sync android",
-    "capacitor:sync:after": "node node_modules/capacitor-levelplay-ads/scripts/levelplay-manifest.js"
-  },
-  "levelplay": {
-    "networks": [
-      "unityads"
-    ],
-    "consentProvider": "custom"
+    "cap:sync": "npx cap sync android"
   },
   "dependencies": {
     "@capacitor/core": "^8.0.0",
     "@capacitor/android": "^8.0.0",
-    "capacitor-levelplay-ads": "*"
+    "@capacitor-community/admob": "^6.0.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.0.0"
